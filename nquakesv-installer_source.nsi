@@ -1,8 +1,8 @@
 ;nQuakesv NSIS Online Installer Script
-;By Empezar 2013-08-03; Last modified 2013-09-14
+;By Empezar 2013-08-03; Last modified 2013-10-07
 
-!define VERSION "1.1"
-!define SHORTVERSION "11"
+!define VERSION "1.2"
+!define SHORTVERSION "12"
 
 Name "nQuakesv"
 OutFile "nquakesv${SHORTVERSION}_installer.exe"
@@ -77,6 +77,7 @@ Var REMOVE_ALL_FILES
 Var REMOVE_MODIFIED_FILES
 Var RETRIES
 Var SIZE
+Var STARTALLSERVERS
 Var STARTMENU_FOLDER
 Var i
 
@@ -362,6 +363,14 @@ Section "nQuakesv" NQUAKESV
   IntOp $0 $INSTALLED * 100
   IntOp $0 $0 / $INSTSIZE
   RealProgress::SetProgress /NOUNLOAD $0
+  # Move the qtv/qtv/ folder to qtv/ directory
+  Rename "$INSTDIR\qtv\qtv\levelshots" "$INSTDIR\qtv\levelshots"
+  Rename "$INSTDIR\qtv\qtv\listip.cfg" "$INSTDIR\qtv\listip.cfg"
+  Rename "$INSTDIR\qtv\qtv\qtvbg01.png" "$INSTDIR\qtv\qtvbg01.png"
+  Rename "$INSTDIR\qtv\qtv\save.png" "$INSTDIR\qtv\listip.png"
+  Rename "$INSTDIR\qtv\qtv\stream.png" "$INSTDIR\qtv\stream.png"
+  Rename "$INSTDIR\qtv\qtv\style.css" "$INSTDIR\qtv\style.css"
+  RMDir /REBOOTOK "$INSTDIR\qtv\qtv"
   # Remove stuff that's not needed in Windows
   Delete "$INSTDIR\ktx\portx.cfg"
   Delete "$INSTDIR\run\portx.sh"
@@ -432,9 +441,24 @@ Section "nQuakesv" NQUAKESV
   RealProgress::SetProgress /NOUNLOAD $0
   SkipGPLMaps:
 
+  # Download and install configs
+  !insertmacro InstallSection sv-configs.zip "configuration files"
+  # Add to installed size
+  ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "sv-configs.zip"
+  IntOp $INSTALLED $INSTALLED + $0
+  # Set progress bar
+  IntOp $0 $INSTALLED * 100
+  IntOp $0 $0 / $INSTSIZE
+  RealProgress::SetProgress /NOUNLOAD $0
+
   # Download and install Free For All mod
   ${If} $ADDONS_FFA == 1
     !insertmacro InstallSection sv-ffa.zip "Free For All"
+    # Copy MVDSV configuration files
+    CopyFiles /SILENT "$INSTDIR\ktx\mvdsv.cfg" "$INSTDIR\ffa\mvdsv.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\pwd.cfg" "$INSTDIR\ffa\pwd.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\vip_ip.cfg" "$INSTDIR\ffa\vip_ip.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\ban_ip.cfg" "$INSTDIR\ffa\ban_ip.cfg"
     # Add to installed size
     ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "sv-ffa.zip"
     IntOp $INSTALLED $INSTALLED + $0
@@ -447,6 +471,15 @@ Section "nQuakesv" NQUAKESV
   # Download and install Team Fortress
   ${If} $ADDONS_FORTRESS == 1
     !insertmacro InstallSection sv-fortress.zip "Team Fortress"
+    # Copy MVDSV configuration files
+    CopyFiles /SILENT "$INSTDIR\ktx\mvdsv.cfg" "$INSTDIR\fortress\mvdsv.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\pwd.cfg" "$INSTDIR\fortress\pwd.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\vip_ip.cfg" "$INSTDIR\fortress\vip_ip.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\ban_ip.cfg" "$INSTDIR\fortress\ban_ip.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\mvdsv.cfg" "$INSTDIR\thundervote\mvdsv.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\pwd.cfg" "$INSTDIR\thundervote\pwd.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\vip_ip.cfg" "$INSTDIR\thundervote\vip_ip.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\ban_ip.cfg" "$INSTDIR\thundervote\ban_ip.cfg"
     # Add to installed size
     ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "sv-fortress.zip"
     IntOp $INSTALLED $INSTALLED + $0
@@ -459,6 +492,11 @@ Section "nQuakesv" NQUAKESV
   # Download and install Clan Arena
   ${If} $ADDONS_CA == 1
     !insertmacro InstallSection sv-ca.zip "Clan Arena"
+    # Copy MVDSV configuration files
+    CopyFiles /SILENT "$INSTDIR\ktx\mvdsv.cfg" "$INSTDIR\cace\mvdsv.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\pwd.cfg" "$INSTDIR\cace\pwd.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\vip_ip.cfg" "$INSTDIR\cace\vip_ip.cfg"
+    CopyFiles /SILENT "$INSTDIR\ktx\ban_ip.cfg" "$INSTDIR\cace\ban_ip.cfg"
     # Add to installed size
     ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "sv-ca.zip"
     IntOp $INSTALLED $INSTALLED + $0
@@ -467,16 +505,6 @@ Section "nQuakesv" NQUAKESV
     IntOp $0 $0 / $INSTSIZE
     RealProgress::SetProgress /NOUNLOAD $0
   ${EndIf}
-
-  # Download and install configs
-  !insertmacro InstallSection sv-configs.zip "configuration files"
-  # Add to installed size
-  ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "sv-configs.zip"
-  IntOp $INSTALLED $INSTALLED + $0
-  # Set progress bar
-  IntOp $0 $INSTALLED * 100
-  IntOp $0 $0 / $INSTSIZE
-  RealProgress::SetProgress /NOUNLOAD $0
 
   # Rename readme files
   Rename "$INSTDIR\id1\README" "$INSTDIR\id1\readme.txt"
@@ -491,24 +519,34 @@ Section "nQuakesv" NQUAKESV
 
   # Create shortcuts in shortcuts folder
   CreateDirectory "$INSTDIR\shortcuts"
+  # Create a batch file for starting all servers
+  FileOpen $STARTALLSERVERS "$INSTDIR\shortcuts\start_all_servers.bat" w
   ${ForEach} $i 1 $CONFIG_PORTS + 1
     CreateShortCut "$INSTDIR\shortcuts\ktx 2850$i.lnk" "$INSTDIR\mvdsv.exe" "-port 2850$i -game ktx +exec port$i.cfg" "$INSTDIR\mvdsv.exe" 0
+    FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\ktx 2850$i.lnk$\"$\r$\n"
   ${Next}
-  ${If} $ADDONS_QTV == 1
-    CreateShortCut "$INSTDIR\shortcuts\qtv 28000.lnk" "$INSTDIR\qtv\qtv.exe" "+exec qtv.cfg" "$INSTDIR\qtv\qtv.exe" 0
-  ${EndIf}
-  ${If} $ADDONS_QWFWD == 1
-    CreateShortCut "$INSTDIR\shortcuts\qwfwd 30000.lnk" "$INSTDIR\qwfwd\qwfwd.exe" "" "$INSTDIR\qwfwd\qwfwd.exe" 0
-  ${EndIf}
-  ${If} $ADDONS_CA == 1
-    CreateShortCut "$INSTDIR\shortcuts\ca 27800.lnk" "$INSTDIR\mvdsv.exe" "-port 27800 -game cace +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
-  ${EndIf}
   ${If} $ADDONS_FFA == 1
     CreateShortCut "$INSTDIR\shortcuts\ffa 27500.lnk" "$INSTDIR\mvdsv.exe" "-port 27500 -game ffa +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
+    FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\ffa 27500.lnk$\"$\r$\n"
   ${EndIf}
   ${If} $ADDONS_FORTRESS == 1
     CreateShortCut "$INSTDIR\shortcuts\fortress 27700.lnk" "$INSTDIR\mvdsv.exe" "-port 27700 -game fortress +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
+    FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\fortress 27700.lnk$\"$\r$\n"
   ${EndIf}
+  ${If} $ADDONS_CA == 1
+    CreateShortCut "$INSTDIR\shortcuts\ca 27800.lnk" "$INSTDIR\mvdsv.exe" "-port 27800 -game cace +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
+    FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\ca 27800.lnk$\"$\r$\n"
+  ${EndIf}
+  ${If} $ADDONS_QTV == 1
+    CreateShortCut "$INSTDIR\shortcuts\qtv 28000.lnk" "$INSTDIR\qtv\qtv.exe" "+exec qtv.cfg" "$INSTDIR\qtv\qtv.exe" 0
+    FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\qtv 28000.lnk$\"$\r$\n"
+  ${EndIf}
+  ${If} $ADDONS_QWFWD == 1
+    CreateShortCut "$INSTDIR\shortcuts\qwfwd 30000.lnk" "$INSTDIR\qwfwd\qwfwd.exe" "" "$INSTDIR\qwfwd\qwfwd.exe" 0
+    FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\qwfwd 30000.lnk$\"$\r$\n"
+  ${EndIf}
+  FileWrite $STARTALLSERVERS "exit$\r$\n"
+  FileClose $STARTALLSERVERS
 
 SectionEnd
 
@@ -528,25 +566,27 @@ Section "" # StartMenu
     WriteINIStr "$SMPROGRAMS\$STARTMENU_FOLDER\Links\Custom Graphics.url" "InternetShortcut" "URL" "http://gfx.quakeworld.nu/"
 
     # Create shortcuts
-    CreateDirectory "$SMPROGRAMS\$STARTMENU_FOLDER\Start servers"
+    CreateDirectory "$SMPROGRAMS\$STARTMENU_FOLDER\Servers"
+    CreateDirectory "$SMPROGRAMS\$STARTMENU_FOLDER\Proxies"
     ${ForEach} $i 1 $CONFIG_PORTS + 1
-      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Start servers\KTX #2850$i.lnk" "$INSTDIR\mvdsv.exe" "-port 2850$i -game ktx +exec port$i.cfg" "$INSTDIR\mvdsv.exe" 0
+      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Servers\KTX #2850$i.lnk" "$INSTDIR\mvdsv.exe" "-port 2850$i -game ktx +exec port$i.cfg" "$INSTDIR\mvdsv.exe" 0
     ${Next}
-    ${If} $ADDONS_QTV == 1
-      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Start servers\QTV #28000.lnk" "$INSTDIR\qtv\qtv.exe" "+exec qtv.cfg" "$INSTDIR\qtv\qtv.exe" 0
-    ${EndIf}
-    ${If} $ADDONS_QWFWD == 1
-      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Start servers\QWFWD #30000.lnk" "$INSTDIR\qwfwd\qwfwd.exe" "" "$INSTDIR\qwfwd\qwfwd.exe" 0
-    ${EndIf}
     ${If} $ADDONS_FFA == 1
-      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Start servers\Free For All #27500.lnk" "$INSTDIR\mvdsv.exe" "-port 27500 -game ffa +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
+      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Servers\Free For All #27500.lnk" "$INSTDIR\mvdsv.exe" "-port 27500 -game ffa +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
     ${EndIf}
     ${If} $ADDONS_FORTRESS == 1
-      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Start servers\Team Fortress #27700.lnk" "$INSTDIR\mvdsv.exe" "-port 27700 -game fortress +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
+      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Servers\Team Fortress #27700.lnk" "$INSTDIR\mvdsv.exe" "-port 27700 -game fortress +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
     ${EndIf}
     ${If} $ADDONS_CA == 1
-      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Start servers\Clan Arena #27800.lnk" "$INSTDIR\mvdsv.exe" "-port 27800 -game cace +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
+      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Servers\Clan Arena #27800.lnk" "$INSTDIR\mvdsv.exe" "-port 27800 -game cace +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
     ${EndIf}
+    ${If} $ADDONS_QTV == 1
+      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Proxies\QTV #28000.lnk" "$INSTDIR\qtv\qtv.exe" "+exec qtv.cfg" "$INSTDIR\qtv\qtv.exe" 0
+    ${EndIf}
+    ${If} $ADDONS_QWFWD == 1
+      CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Proxies\QWFWD #30000.lnk" "$INSTDIR\qwfwd\qwfwd.exe" "" "$INSTDIR\qwfwd\qwfwd.exe" 0
+    ${EndIf}
+    CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Start all servers.lnk" "$INSTDIR\shortcuts\start_all_servers.bat" "" "$INSTDIR\mvdsv.exe" 0 SW_SHOWMINIMIZED
     CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Readme.lnk" "$INSTDIR\readme.txt" "" "$INSTDIR\readme.txt" 0
     CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Uninstall nQuakesv.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
 
@@ -641,6 +681,7 @@ Section "" # Clean up installation
       FileWrite $PORTCONFIG "$\r$\n"
       FileWrite $PORTCONFIG "set k_motd_time                 $\"5$\" // time motd is displayed in seconds$\r$\n"
     FileClose $PORTCONFIG
+    CopyFiles "$INSTDIR\fortress\port1.cfg" "$INSTDIR\thundervote\port1.cfg"
   ${EndIf}
 
   # Write pwd.cfgs
@@ -659,6 +700,7 @@ Section "" # Clean up installation
     FileWrite $QTVCONFIG "maxclients 100$\r$\n"
     FileWrite $QTVCONFIG "maxservers 100$\r$\n"
     FileWrite $QTVCONFIG "floodprot 4 2 2$\r$\n"
+    FileWrite $QTVCONFIG "demo_dir ../demos/$\r$\n"
     FileWrite $QTVCONFIG "allow_http 1$\r$\n"
     FileWrite $QTVCONFIG "allow_download_other 1$\r$\n"
     FileWrite $QTVCONFIG "allow_download_demos 1$\r$\n"

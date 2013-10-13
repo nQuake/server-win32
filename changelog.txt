@@ -1,3 +1,10 @@
+2013-10-07 - nQuakesv v1.2 for Windows
+
+* Added a "Start all servers" shortcut.
+* Fixed the bug where QTV website can't find CSS or images.
+* Fixed the bug where FFA, Clan Arena and Team Fortress were left without server (mvdsv) configurations.
+* Moved QTV and QWFWD start menu shortcuts to their own Proxies folder.
+
 2013-09-15 - nQuakesv v1.1 for Windows
 
 * Server administrator now defaults to current Windows user.
