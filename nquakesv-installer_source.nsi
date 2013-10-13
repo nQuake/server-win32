@@ -1,8 +1,8 @@
 ;nQuakesv NSIS Online Installer Script
-;By Empezar 2013-08-03; Last modified 2013-08-20
+;By Empezar 2013-08-03; Last modified 2013-09-14
 
-!define VERSION "1.0"
-!define SHORTVERSION "10"
+!define VERSION "1.1"
+!define SHORTVERSION "11"
 
 Name "nQuakesv"
 OutFile "nquakesv${SHORTVERSION}_installer.exe"
@@ -894,6 +894,10 @@ Function CONFIG
 
   !insertmacro MUI_INSTALLOPTIONS_EXTRACT "config.ini"
   !insertmacro MUI_HEADER_TEXT "Configuration" "Setup server configuration."
+  System::Call "advapi32::GetUserName(t .r0, *i ${NSIS_MAX_STRLEN} r1) i.r2"
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "config.ini" "Field 4" "State" "$0"
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "config.ini" "Field 6" "State" "$0@example.com"
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "config.ini" "Field 15" "State" "$0 nQuake"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "config.ini"
 
 FunctionEnd
@@ -907,7 +911,7 @@ Function ADDONS
   !insertmacro MUI_INSTALLOPTIONS_WRITE "addons.ini" "Field 15" "State" "$0 Team Fortress"
   !insertmacro MUI_INSTALLOPTIONS_WRITE "addons.ini" "Field 18" "State" "$0 Free For All"
   !insertmacro MUI_INSTALLOPTIONS_WRITE "addons.ini" "Field 21" "State" "$0 Clan Arena"
-  !insertmacro MUI_HEADER_TEXT "Configuration" "Setup server addons."
+  !insertmacro MUI_HEADER_TEXT "Configuration" "Setup modifications and proxies."
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "addons.ini"
 
 FunctionEnd
