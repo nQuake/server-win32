@@ -1,8 +1,8 @@
 ;nQuakesv NSIS Online Installer Script
-;By Empezar 2013-08-03; Last modified 2013-10-07
+;By Empezar 2013-08-03; Last modified 2013-10-10
 
-!define VERSION "1.2"
-!define SHORTVERSION "12"
+!define VERSION "1.3"
+!define SHORTVERSION "13"
 
 Name "nQuakesv"
 OutFile "nquakesv${SHORTVERSION}_installer.exe"
@@ -115,6 +115,7 @@ Page custom CONFIG
 Page custom ADDONS
 
 DirText "Setup will install nQuakesv in the following folder. To install in a different folder, click Browse and select another folder. Click Next to continue." "Destination Folder" "Browse" "Select the folder to install nQuakesv in:"
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW DirectoryPageShow
 !insertmacro MUI_PAGE_DIRECTORY
 
 !insertmacro MUI_PAGE_STARTMENU "Application" $STARTMENU_FOLDER
@@ -1034,6 +1035,68 @@ Function FinishShow
   ${EndIf}
 FunctionEnd
 
+
+;----------------------------------------------------
+;Download size manipulation
+
+!define SetSize "Call SetSize"
+
+Function SetSize
+  !insertmacro MUI_INSTALLOPTIONS_READ $ADDONS_FFA "addons.ini" "Field 16" "State"
+  !insertmacro MUI_INSTALLOPTIONS_READ $ADDONS_CA "addons.ini" "Field 19" "State"
+  !insertmacro MUI_INSTALLOPTIONS_READ $ADDONS_FORTRESS "addons.ini" "Field 13" "State"
+  IntOp $1 0 + 0
+  # Only count shareware if pak0.pak doesn't exist
+  ${If} ${FileExists} "$EXEDIR\pak0.pak"
+    ${GetSize} $EXEDIR "/M=pak0.pak /S=0B /G=0" $7 $8 $9
+    ${If} $7 == "18689235"
+      Goto SkipShareware
+    ${EndIf}
+  ${EndIf}
+  !insertmacro DetermineSectionSize qsw106.zip
+  IntOp $1 $1 + $SIZE
+  SkipShareware:
+  !insertmacro DetermineSectionSize sv-bin-win32.zip
+  IntOp $1 $1 + $SIZE
+  !insertmacro DetermineSectionSize sv-win32.zip
+  IntOp $1 $1 + $SIZE
+  ${If} $ADDONS_CA == 1
+    !insertmacro DetermineSectionSize sv-ca.zip
+    IntOp $1 $1 + $SIZE
+  ${EndIf}
+  !insertmacro DetermineSectionSize sv-configs.zip
+  IntOp $1 $1 + $SIZE
+  ${If} $ADDONS_FFA == 1
+    !insertmacro DetermineSectionSize sv-ffa.zip
+    IntOp $1 $1 + $SIZE
+  ${EndIf}
+  ${If} $ADDONS_FORTRESS == 1
+    !insertmacro DetermineSectionSize sv-fortress.zip
+    IntOp $1 $1 + $SIZE
+  ${EndIf}
+  !insertmacro DetermineSectionSize sv-gpl.zip
+  IntOp $1 $1 + $SIZE
+  !insertmacro DetermineSectionSize sv-maps.zip
+  IntOp $1 $1 + $SIZE
+  # Don't add the size of the GPL maps if pak1.pak exists
+  ${If} ${FileExists} "$EXEDIR\pak1.pak"
+    ${GetSize} $EXEDIR "/M=pak1.pak /S=0B /G=0" $7 $8 $9
+    ${If} $7 == "34257856"
+      Goto SkipGPLMaps
+    ${EndIf}
+  ${EndIf}
+  !insertmacro DetermineSectionSize sv-maps-gpl.zip
+  IntOp $1 $1 + $SIZE
+  SkipGPLMaps:
+  !insertmacro DetermineSectionSize sv-non-gpl.zip
+  IntOp $1 $1 + $SIZE
+FunctionEnd
+
+Function DirectoryPageShow
+  ${SetSize}
+  SectionSetSize ${NQUAKESV} $1
+FunctionEnd 
+
 ;----------------------------------------------------
 ;Functions
 
@@ -1078,47 +1141,6 @@ Function .onInit
     Abort
   ${EndIf}
   ContinueInstall:
-
-  # Determine sizes on all the sections
-  ${If} ${FileExists} "$EXEDIR\pak0.pak"
-    ${GetSize} $EXEDIR "/M=pak0.pak /S=0B /G=0" $7 $8 $9
-    ${If} $7 == "18689235"
-      Goto SkipShareware
-    ${EndIf}
-  ${EndIf}
-  !insertmacro DetermineSectionSize qsw106.zip
-  IntOp $1 0 + $SIZE
-  SkipShareware:
-  !insertmacro DetermineSectionSize sv-bin-win32.zip
-  IntOp $1 $1 + $SIZE
-  !insertmacro DetermineSectionSize sv-win32.zip
-  IntOp $1 $1 + $SIZE
-  !insertmacro DetermineSectionSize sv-ca.zip
-  IntOp $1 $1 + $SIZE
-  !insertmacro DetermineSectionSize sv-configs.zip
-  IntOp $1 $1 + $SIZE
-  !insertmacro DetermineSectionSize sv-ffa.zip
-  IntOp $1 $1 + $SIZE
-  !insertmacro DetermineSectionSize sv-fortress.zip
-  IntOp $1 $1 + $SIZE
-  !insertmacro DetermineSectionSize sv-gpl.zip
-  IntOp $1 $1 + $SIZE
-  !insertmacro DetermineSectionSize sv-maps.zip
-  IntOp $1 $1 + $SIZE
-  # Don't add the size of the GPL maps if pak1.pak exists
-  ${If} ${FileExists} "$EXEDIR\pak1.pak"
-    ${GetSize} $EXEDIR "/M=pak1.pak /S=0B /G=0" $7 $8 $9
-    ${If} $7 == "34257856"
-      Goto SkipGPLMaps
-    ${EndIf}
-  ${EndIf}
-  !insertmacro DetermineSectionSize sv-maps-gpl.zip
-  IntOp $1 $1 + $SIZE
-  SkipGPLMaps:
-  !insertmacro DetermineSectionSize sv-non-gpl.zip
-  IntOp $1 $1 + $SIZE
-  SectionSetSize ${NQUAKESV} $1
-
   InitEnd:
 
 FunctionEnd

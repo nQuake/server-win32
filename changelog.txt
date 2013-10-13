@@ -1,3 +1,7 @@
+2013-10-10 - nQuakesv v1.3 for Windows
+
+* Fixed the bug where the download size was inaccurate.
+
 2013-10-07 - nQuakesv v1.2 for Windows
 
 * Added a "Start all servers" shortcut.
