@@ -40,3 +40,11 @@
   ReadINIStr $0 $NQUAKE_INI "distfile_sizes" ${PACKAGE}
   StrCpy $SIZE $0
 !macroend
+
+# Remove directory if empty
+!macro RemoveFolderIfEmpty FOLDER
+  ${locate::GetSize} $INSTDIR "/M=*.* /G=1" $0 $1 $2
+  ${If} $1 == 0
+    RMDir /r /REBOOTOK "${FOLDER}"
+  ${EndIf}
+!macroend

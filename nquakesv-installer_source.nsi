@@ -1,15 +1,15 @@
 ;nQuakesv NSIS Online Installer Script
-;By Empezar 2013-08-03; Last modified 2013-10-10
+;By Empezar 2013-08-03; Last modified 2013-10-13
 
-!define VERSION "1.3"
-!define SHORTVERSION "13"
+!define VERSION "1.4"
+!define SHORTVERSION "14"
 
 Name "nQuakesv"
 OutFile "nquakesv${SHORTVERSION}_installer.exe"
 InstallDir "C:\nQuakesv"
 
 !define INSTALLER_URL "http://nquake.com" # Note: no trailing slash!
-!define DISTFILES_PATH "C:\nquakesv-distfiles" # Note: no trailing slash!
+!define DISTFILES_PATH "$LOCALAPPDATA\nQuakesv\" # Note: no trailing slash!
 
 # Editing anything below this line is not recommended
 ;---------------------------------------------------
@@ -23,6 +23,7 @@ InstallDirRegKey HKCU "Software\nQuakesv" "Install_Dir"
 !include "FileFunc.nsh"
 !insertmacro GetSize
 !insertmacro GetTime
+!include "StrStrip.nsh"
 !include "LogicLib.nsh"
 !include "Time.nsh"
 !include "Locate.nsh"
@@ -35,27 +36,23 @@ InstallDirRegKey HKCU "Software\nQuakesv" "Install_Dir"
 ;----------------------------------------------------
 ;Variables
 
-Var CONFIG_HOSTNAME
-Var CONFIG_DNS
-Var CONFIG_PORTS
-Var CONFIG_ADMIN
-Var CONFIG_EMAIL
-Var CONFIG_RCON
+Var ADDONS_CA
+Var ADDONS_CA_HOSTNAME
+Var ADDONS_FFA
+Var ADDONS_FFA_HOSTNAME
+Var ADDONS_FORTRESS
+Var ADDONS_FORTRESS_HOSTNAME
 Var ADDONS_QTV
 Var ADDONS_QTV_HOSTNAME
 Var ADDONS_QTV_PASSWORD
 Var ADDONS_QWFWD
 Var ADDONS_QWFWD_HOSTNAME
-Var ADDONS_FFA
-Var ADDONS_FFA_HOSTNAME
-Var ADDONS_CA
-Var ADDONS_CA_HOSTNAME
-Var ADDONS_FORTRESS
-Var ADDONS_FORTRESS_HOSTNAME
-Var PASSWORDCONFIG
-Var PORTCONFIG
-Var QTVCONFIG
-Var QWFWDCONFIG
+Var CONFIG_ADMIN
+Var CONFIG_DNS
+Var CONFIG_EMAIL
+Var CONFIG_HOSTNAME
+Var CONFIG_PORTS
+Var CONFIG_RCON
 Var DISTFILES_DELETE
 Var DISTFILES_PATH
 Var DISTFILES_UPDATE
@@ -63,6 +60,10 @@ Var DISTFILES_URL
 Var DISTFILES
 Var DISTLOG
 Var DISTLOGTMP
+Var PASSWORDCONFIG
+Var PORTCONFIG
+Var QTVCONFIG
+Var QWFWDCONFIG
 Var ERRLOG
 Var ERRLOGTMP
 Var ERRORS
@@ -71,8 +72,8 @@ Var INSTLOG
 Var INSTLOGTMP
 Var INSTSIZE
 Var NQUAKE_INI
-Var PAK_LOCATION
 Var OFFLINE
+Var PAK_LOCATION
 Var REMOVE_ALL_FILES
 Var REMOVE_MODIFIED_FILES
 Var RETRIES
@@ -104,11 +105,9 @@ Var i
 LicenseForceSelection checkbox "I agree to these terms and conditions"
 !insertmacro MUI_PAGE_LICENSE "license.txt"
 
-Page custom DISTFILEFOLDER
-
-Page custom MIRRORSELECT
-
 Page custom FULLVERSION
+
+Page custom DOWNLOAD
 
 Page custom CONFIG
 
@@ -159,8 +158,7 @@ LangString ^SpaceRequired ${LANG_ENGLISH} "Download size: "
 ReserveFile "fullversion.ini"
 ReserveFile "config.ini"
 ReserveFile "addons.ini"
-ReserveFile "distfilefolder.ini"
-ReserveFile "mirrorselect.ini"
+ReserveFile "download.ini"
 ReserveFile "errors.ini"
 ReserveFile "uninstall.ini"
 
@@ -178,9 +176,9 @@ Section "" # Prepare installation
 
   # Read information from custom pages
   !insertmacro MUI_INSTALLOPTIONS_READ $PAK_LOCATION "fullversion.ini" "Field 3" "State"
-  !insertmacro MUI_INSTALLOPTIONS_READ $DISTFILES_PATH "distfilefolder.ini" "Field 3" "State"
-  !insertmacro MUI_INSTALLOPTIONS_READ $DISTFILES_UPDATE "distfilefolder.ini" "Field 4" "State"
-  !insertmacro MUI_INSTALLOPTIONS_READ $DISTFILES_DELETE "distfilefolder.ini" "Field 5" "State"
+  !insertmacro MUI_INSTALLOPTIONS_READ $DISTFILES_PATH "download.ini" "Field 3" "State"
+  !insertmacro MUI_INSTALLOPTIONS_READ $DISTFILES_UPDATE "download.ini" "Field 4" "State"
+  !insertmacro MUI_INSTALLOPTIONS_READ $DISTFILES_DELETE "download.ini" "Field 5" "State"
   !insertmacro MUI_INSTALLOPTIONS_READ $CONFIG_HOSTNAME "config.ini" "Field 15" "State"
   !insertmacro MUI_INSTALLOPTIONS_READ $CONFIG_DNS "config.ini" "Field 18" "State"
   !insertmacro MUI_INSTALLOPTIONS_READ $CONFIG_PORTS "config.ini" "Field 12" "State"
@@ -206,9 +204,13 @@ Section "" # Prepare installation
 
   # Calculate the installation size
   ${Unless} ${FileExists} "$INSTDIR\ID1\PAK0.PAK"
-  ${OrUnless} ${FileExists} "$EXEDIR\pak0.pak"
-    ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "qsw106.zip"
-    IntOp $INSTSIZE $INSTSIZE + $0
+    ${If} ${FileExists} "$PAK_LOCATION"
+      ${GetSize} $R0 "/M=pak0.pak /S=0B /G=0" $7 $8 $9
+      ${If} $7 != "18278619"
+        ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "qsw106.zip"
+        IntOp $INSTSIZE $INSTSIZE + $0
+      ${EndIf}
+    ${EndIf}
   ${EndUnless}
   ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "sv-bin-win32.zip"
   IntOp $INSTSIZE $INSTSIZE + $0
@@ -241,7 +243,7 @@ Section "" # Prepare installation
   IntOp $INSTSIZE $INSTSIZE + $0
 
   # Find out what mirror was selected
-  !insertmacro MUI_INSTALLOPTIONS_READ $R0 "mirrorselect.ini" "Field 3" "State"
+  !insertmacro MUI_INSTALLOPTIONS_READ $R0 "download.ini" "Field 7" "State"
   ${If} $R0 == "Randomly selected mirror (Recommended)"
     # Get amount of mirrors ($0 = amount of mirrors)
     StrCpy $0 1
@@ -296,13 +298,23 @@ SectionEnd
 Section "nQuakesv" NQUAKESV
 
   # Download and install pak0.pak (shareware data) unless pak0.pak can be found alongside the installer executable
-  ${If} ${FileExists} "$EXEDIR\pak0.pak"
-    ${GetSize} $EXEDIR "/M=pak0.pak /S=0B /G=0" $7 $8 $9
-    ${If} $7 == "18689235"
-      CreateDirectory "$INSTDIR\id1"
-      CopyFiles "$EXEDIR\pak0.pak" "$INSTDIR\id1\pak0.pak"
-      Goto SkipShareware
+  ${If} ${FileExists} "$INSTDIR\id1\pak0.pak"
+    StrCpy $R0 "$INSTDIR"
+  ${ElseIf} ${FileExists} "$EXEDIR\pak0.pak"
+    StrCpy $R0 "$EXEDIR"
+  ${ElseIf} ${FileExists} "$DISTFILES_PATH\pak0.pak"
+    StrCpy $R0 "$DISTFILES_PATH"
+  ${EndIf}
+  ${GetSize} $R0 "/M=pak0.pak /S=0B /G=0" $7 $8 $9
+  ${If} $7 == "18689235"
+    CreateDirectory "$INSTDIR\id1"
+    CopyFiles "$R0\pak0.pak" "$INSTDIR\id1\pak0.pak"
+    # Keep pak0.pak and remove qsw106.zip in distfile folder if DISTFILES_DELETE is 0
+    ${If} $DISTFILES_DELETE == 0
+      CopyFiles "$INSTDIR\id1\pak0.pak" "$DISTFILES_PATH\pak0.pak"
+      Delete "$DISTFILES_PATH\qsw106.zip"
     ${EndIf}
+    Goto SkipShareware
   ${EndIf}
   !insertmacro InstallSection qsw106.zip "Quake shareware"
   # Remove crap files extracted from shareware zip
@@ -325,6 +337,11 @@ Section "nQuakesv" NQUAKESV
   Delete "$INSTDIR\MGENVXD.VXD"
   Rename "$INSTDIR\ID1" "$INSTDIR\id1"
   Rename "$INSTDIR\id1\PAK0.PAK" "$INSTDIR\id1\pak0.pak"
+  # Keep pak0.pak and remove qsw106.zip in distfile folder if DISTFILES_DELETE is 0
+  ${If} $DISTFILES_DELETE == 0
+    CopyFiles "$INSTDIR\id1\pak0.pak" "$DISTFILES_PATH\pak0.pak"
+    Delete "$DISTFILES_PATH\qsw106.zip"
+  ${EndIf}
   SkipShareware:
   # Add to installed size
   ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "qsw106.zip"
@@ -371,17 +388,32 @@ Section "nQuakesv" NQUAKESV
   Rename "$INSTDIR\qtv\qtv\save.png" "$INSTDIR\qtv\listip.png"
   Rename "$INSTDIR\qtv\qtv\stream.png" "$INSTDIR\qtv\stream.png"
   Rename "$INSTDIR\qtv\qtv\style.css" "$INSTDIR\qtv\style.css"
-  RMDir /REBOOTOK "$INSTDIR\qtv\qtv"
+  # Add all files within levelshots directory
+  ${locate::Open} "$INSTDIR\qtv\levelshots" "/F=1" $R0
+  StrCpy $1 1
+  ${DoUntil} $1 == ""
+    ${locate::Find} $R0 $0 $1 $2 $3 $4
+    ${If} $1 != ""
+      ${StrStrip} "$INSTDIR\" "$0\$1" $R1
+      FileWrite $INSTLOG "$R1$\r$\n"
+    ${EndIf}
+  ${LoopUntil} $1 == ""
+  FileWrite $INSTLOG "qtv\listip.cfg$\r$\n"
+  FileWrite $INSTLOG "qtv\qtvbg01.png$\r$\n"
+  FileWrite $INSTLOG "qtv\listip.png$\r$\n"
+  FileWrite $INSTLOG "qtv\stream.png$\r$\n"
+  FileWrite $INSTLOG "qtv\style.css$\r$\n"
+  RMDir /r /REBOOTOK "$INSTDIR\qtv\qtv"
   # Remove stuff that's not needed in Windows
   Delete "$INSTDIR\ktx\portx.cfg"
   Delete "$INSTDIR\run\portx.sh"
   Delete "$INSTDIR\run\qtv.sh"
   Delete "$INSTDIR\run\qwfwd.sh"
-  RMDir /REBOOTOK "$INSTDIR\run"
+  RMDir /r /REBOOTOK "$INSTDIR\run"
   Delete "$INSTDIR\addons\install_ca.sh"
   Delete "$INSTDIR\addons\install_ffa.sh"
   Delete "$INSTDIR\addons\install_fortress.sh"
-  RMDir /REBOOTOK "$INSTDIR\addons"
+  RMDir /r /REBOOTOK "$INSTDIR\addons"
   Delete "$INSTDIR\start_servers.sh"
   Delete "$INSTDIR\stop_servers.sh"
   Delete "$INSTDIR\update_binaries.sh"
@@ -412,6 +444,9 @@ Section "nQuakesv" NQUAKESV
   # Copy pak1.pak if it can be found alongside the installer executable
   ${If} ${FileExists} "$PAK_LOCATION"
     CopyFiles /SILENT $PAK_LOCATION "$INSTDIR\id1\pak1.pak"
+    ${If} $DISTFILES_DELETE == 0
+      CopyFiles "$INSTDIR\id1\pak1.pak" "$DISTFILES_PATH\pak1.pak"
+    ${EndIf}
     RMDir /r /REBOOTOK "$INSTDIR\id1\maps"
     RMDir /r /REBOOTOK "$INSTDIR\id1\progs"
     RMDir /r /REBOOTOK "$INSTDIR\id1\sound"
@@ -422,6 +457,9 @@ Section "nQuakesv" NQUAKESV
     ${GetSize} $EXEDIR "/M=pak1.pak /S=0B /G=0" $7 $8 $9
     ${If} $7 == "34257856"
       CopyFiles "$EXEDIR\pak1.pak" "$INSTDIR\id1\pak1.pak"
+      ${If} $DISTFILES_DELETE == 0
+        CopyFiles "$EXEDIR\pak1.pak" "$DISTFILES_PATH\pak1.pak"
+      ${EndIf}
       RMDir /r /REBOOTOK "$INSTDIR\id1\maps"
       RMDir /r /REBOOTOK "$INSTDIR\id1\progs"
       RMDir /r /REBOOTOK "$INSTDIR\id1\sound"
@@ -460,6 +498,10 @@ Section "nQuakesv" NQUAKESV
     CopyFiles /SILENT "$INSTDIR\ktx\pwd.cfg" "$INSTDIR\ffa\pwd.cfg"
     CopyFiles /SILENT "$INSTDIR\ktx\vip_ip.cfg" "$INSTDIR\ffa\vip_ip.cfg"
     CopyFiles /SILENT "$INSTDIR\ktx\ban_ip.cfg" "$INSTDIR\ffa\ban_ip.cfg"
+    FileWrite $INSTLOG "ffa\mvdsv.cfg$\r$\n"
+    FileWrite $INSTLOG "ffa\pwd.cfg$\r$\n"
+    FileWrite $INSTLOG "ffa\vip_ip.cfg$\r$\n"
+    FileWrite $INSTLOG "ffa\ban_ip.cfg$\r$\n"
     # Add to installed size
     ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "sv-ffa.zip"
     IntOp $INSTALLED $INSTALLED + $0
@@ -481,6 +523,14 @@ Section "nQuakesv" NQUAKESV
     CopyFiles /SILENT "$INSTDIR\ktx\pwd.cfg" "$INSTDIR\thundervote\pwd.cfg"
     CopyFiles /SILENT "$INSTDIR\ktx\vip_ip.cfg" "$INSTDIR\thundervote\vip_ip.cfg"
     CopyFiles /SILENT "$INSTDIR\ktx\ban_ip.cfg" "$INSTDIR\thundervote\ban_ip.cfg"
+    FileWrite $INSTLOG "fortress\mvdsv.cfg$\r$\n"
+    FileWrite $INSTLOG "fortress\pwd.cfg$\r$\n"
+    FileWrite $INSTLOG "fortress\vip_ip.cfg$\r$\n"
+    FileWrite $INSTLOG "fortress\ban_ip.cfg$\r$\n"
+    FileWrite $INSTLOG "thundervote\mvdsv.cfg$\r$\n"
+    FileWrite $INSTLOG "thundervote\pwd.cfg$\r$\n"
+    FileWrite $INSTLOG "thundervote\vip_ip.cfg$\r$\n"
+    FileWrite $INSTLOG "thundervote\ban_ip.cfg$\r$\n"
     # Add to installed size
     ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "sv-fortress.zip"
     IntOp $INSTALLED $INSTALLED + $0
@@ -498,6 +548,10 @@ Section "nQuakesv" NQUAKESV
     CopyFiles /SILENT "$INSTDIR\ktx\pwd.cfg" "$INSTDIR\cace\pwd.cfg"
     CopyFiles /SILENT "$INSTDIR\ktx\vip_ip.cfg" "$INSTDIR\cace\vip_ip.cfg"
     CopyFiles /SILENT "$INSTDIR\ktx\ban_ip.cfg" "$INSTDIR\cace\ban_ip.cfg"
+    FileWrite $INSTLOG "cace\mvdsv.cfg$\r$\n"
+    FileWrite $INSTLOG "cace\pwd.cfg$\r$\n"
+    FileWrite $INSTLOG "cace\vip_ip.cfg$\r$\n"
+    FileWrite $INSTLOG "cace\ban_ip.cfg$\r$\n"
     # Add to installed size
     ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "sv-ca.zip"
     IntOp $INSTALLED $INSTALLED + $0
@@ -525,29 +579,36 @@ Section "nQuakesv" NQUAKESV
   ${ForEach} $i 1 $CONFIG_PORTS + 1
     CreateShortCut "$INSTDIR\shortcuts\ktx 2850$i.lnk" "$INSTDIR\mvdsv.exe" "-port 2850$i -game ktx +exec port$i.cfg" "$INSTDIR\mvdsv.exe" 0
     FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\ktx 2850$i.lnk$\"$\r$\n"
+    FileWrite $INSTLOG "shortcuts\ktx 2850$i.lnk$\r$\n"
   ${Next}
   ${If} $ADDONS_FFA == 1
     CreateShortCut "$INSTDIR\shortcuts\ffa 27500.lnk" "$INSTDIR\mvdsv.exe" "-port 27500 -game ffa +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
     FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\ffa 27500.lnk$\"$\r$\n"
+    FileWrite $INSTLOG "shortcuts\ffa 27500.lnk$\r$\n"
   ${EndIf}
   ${If} $ADDONS_FORTRESS == 1
     CreateShortCut "$INSTDIR\shortcuts\fortress 27700.lnk" "$INSTDIR\mvdsv.exe" "-port 27700 -game fortress +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
     FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\fortress 27700.lnk$\"$\r$\n"
+    FileWrite $INSTLOG "shortcuts\fortress 27700.lnk$\r$\n"
   ${EndIf}
   ${If} $ADDONS_CA == 1
     CreateShortCut "$INSTDIR\shortcuts\ca 27800.lnk" "$INSTDIR\mvdsv.exe" "-port 27800 -game cace +exec port1.cfg" "$INSTDIR\mvdsv.exe" 0
     FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\ca 27800.lnk$\"$\r$\n"
+    FileWrite $INSTLOG "shortcuts\ca 27800.lnk$\r$\n"
   ${EndIf}
   ${If} $ADDONS_QTV == 1
     CreateShortCut "$INSTDIR\shortcuts\qtv 28000.lnk" "$INSTDIR\qtv\qtv.exe" "+exec qtv.cfg" "$INSTDIR\qtv\qtv.exe" 0
     FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\qtv 28000.lnk$\"$\r$\n"
+    FileWrite $INSTLOG "shortcuts\qtv 28000.lnk$\r$\n"
   ${EndIf}
   ${If} $ADDONS_QWFWD == 1
     CreateShortCut "$INSTDIR\shortcuts\qwfwd 30000.lnk" "$INSTDIR\qwfwd\qwfwd.exe" "" "$INSTDIR\qwfwd\qwfwd.exe" 0
     FileWrite $STARTALLSERVERS "@start $\"$\" /min /b $\"$INSTDIR\shortcuts\qwfwd 30000.lnk$\"$\r$\n"
+    FileWrite $INSTLOG "shortcuts\qwfwd 30000.lnk$\r$\n"
   ${EndIf}
   FileWrite $STARTALLSERVERS "exit$\r$\n"
   FileClose $STARTALLSERVERS
+  FileWrite $INSTLOG "shortcuts\start_all_servers.bat$\r$\n"
 
 SectionEnd
 
@@ -599,11 +660,6 @@ SectionEnd
 
 Section "" # Clean up installation
 
-  # Close open temporary files
-  FileClose $INSTLOG
-  FileClose $ERRLOG
-  FileClose $DISTLOG
-
   # Write portx.cfgs
   ${ForEach} $i 1 $CONFIG_PORTS + 1
   FileOpen $PORTCONFIG "$INSTDIR\ktx\port$i.cfg" w
@@ -621,7 +677,8 @@ Section "" # Clean up installation
     FileWrite $PORTCONFIG "//set k_motd5                     $\"line 5$\" // etc..$\r$\n"
     FileWrite $PORTCONFIG "$\r$\n"
     FileWrite $PORTCONFIG "set k_motd_time                 $\"5$\" // time motd is displayed in seconds$\r$\n"
-  FileClose $PORTCONFIG
+    FileClose $PORTCONFIG
+    FileWrite $INSTLOG "ktx\port$i.cfg$\r$\n"
   ${Next}
 
   # Write port1.cfg (clan arena)
@@ -683,6 +740,7 @@ Section "" # Clean up installation
       FileWrite $PORTCONFIG "set k_motd_time                 $\"5$\" // time motd is displayed in seconds$\r$\n"
     FileClose $PORTCONFIG
     CopyFiles "$INSTDIR\fortress\port1.cfg" "$INSTDIR\thundervote\port1.cfg"
+    FileWrite $INSTLOG "thundervote\port1.cfg$\r$\n"
   ${EndIf}
 
   # Write pwd.cfgs
@@ -736,16 +794,47 @@ Section "" # Clean up installation
   FileWrite $QWFWDCONFIG "set masters qwmaster.ocrana.de:27000    // specify a list of master servers$\r$\n"
   FileWrite $QWFWDCONFIG "set masters_heartbeat 0       // allow sending heartbeats to masters (0=off, 1=enabled)$\r$\n"
   FileWrite $QWFWDCONFIG "set masters_query 0       // query the master server list (0=off, 1=enabled)$\r$\n"
+  FileCLose $QWFWDCONFIG
+
+  # Close open temporary files
+  FileClose $INSTLOG
+  FileClose $ERRLOG
+  FileClose $DISTLOG
+
+
+    ${DoUntil} ${Errors}
+      FileRead $R0 $0
+      StrCpy $0 $0 -2
+      # Only remove file if it has not been altered since install, if the user chose to do so
+      ${If} ${FileExists} "$INSTDIR\$0"
+      ${AndUnless} $REMOVE_MODIFIED_FILES == 1
+        ${time::GetFileTime} "$INSTDIR\$0" $2 $3 $4
+        ${time::MathTime} "second($1) - second($3) =" $2
+        ${If} $2 >= 0
+          Delete /REBOOTOK "$INSTDIR\$0"
+        ${EndIf}
+      ${ElseIf} $REMOVE_MODIFIED_FILES == 1
+      ${AndIf} ${FileExists} "$INSTDIR\$0"
+        Delete /REBOOTOK "$INSTDIR\$0"
+      ${EndIf}
+      # Set progress bar
+      IntOp $7 $5 * 100
+      IntOp $7 $7 / $R1
+      RealProgress::SetProgress /NOUNLOAD $7
+      IntOp $5 $5 + 1
+    ${LoopUntil} ${Errors}
 
   # Write install.log
   FileOpen $INSTLOG "$INSTDIR\install.log" w
     ${time::GetFileTime} "$INSTDIR\install.log" $0 $1 $2
     FileWrite $INSTLOG "Install date: $1$\r$\n"
     FileOpen $R0 $INSTLOGTMP r
-      ClearErrors
       ${DoUntil} ${Errors}
         FileRead $R0 $0
-        FileWrite $INSTLOG $0
+        StrCpy $0 $0 -2
+        ${If} ${FileExists} "$INSTDIR\$0"
+          FileWrite $INSTLOG "$0$\r$\n"
+        ${EndIf}
       ${LoopUntil} ${Errors}
     FileClose $R0
   FileClose $INSTLOG
@@ -761,7 +850,8 @@ Section "" # Clean up installation
         ${EndIf}
       ${LoopUntil} ${Errors}
     FileClose $DISTLOG
-    RMDir /REBOOTOK $DISTFILES_PATH
+    # Remove directory if empty
+    !insertmacro RemoveFolderIfEmpty $DISTFILES_PATH
   # Copy nquake.ini to the distfiles directory if "update distfiles" and "keep distfiles" was set
   ${ElseIf} $DISTFILES_UPDATE == 1
     FlushINI $NQUAKE_INI
@@ -841,7 +931,8 @@ Section "Uninstall"
     Delete /REBOOTOK "$INSTDIR\uninstall.exe"
     ${locate::RMDirEmpty} $INSTDIR /M=*.* $0
     DetailPrint "Removed $0 empty directories"
-    RMDir /REBOOTOK $INSTDIR
+    # Remove directory if empty
+    !insertmacro RemoveFolderIfEmpty $INSTDIR
   ${Else}
     # Ask the user if he is sure about removing all the files contained within the nQuakesv directory
     MessageBox MB_YESNO|MB_ICONEXCLAMATION "This will remove all files contained within the nQuakesv directory.$\r$\n$\r$\nAre you sure?" IDNO AbortUninst
@@ -869,32 +960,24 @@ SectionEnd
 ;----------------------------------------------------
 ;Custom Pages
 
-Function DISTFILEFOLDER
+Function DOWNLOAD
 
-  !insertmacro MUI_INSTALLOPTIONS_EXTRACT "distfilefolder.ini"
+  !insertmacro MUI_INSTALLOPTIONS_EXTRACT "download.ini"
   # Change the text on the distfile folder page if the installer is in offline mode
   ${If} $OFFLINE == 1
-    !insertmacro MUI_HEADER_TEXT "Distribution Files" "Select where the distribution files are located."
-    !insertmacro MUI_INSTALLOPTIONS_WRITE "distfilefolder.ini" "Field 1" "Text" "Setup will use the distribution files (used to install nQuakesv) located in the following folder. To use a different folder, click Browse and select another folder. Click Next to continue."
-    !insertmacro MUI_INSTALLOPTIONS_WRITE "distfilefolder.ini" "Field 4" "Type" ""
-    !insertmacro MUI_INSTALLOPTIONS_WRITE "distfilefolder.ini" "Field 4" "State" "0"
-    !insertmacro MUI_INSTALLOPTIONS_WRITE "distfilefolder.ini" "Field 5" "Type" ""
-    !insertmacro MUI_INSTALLOPTIONS_WRITE "distfilefolder.ini" "Field 5" "State" "0"
+    !insertmacro MUI_HEADER_TEXT "Setup Files" "Select where the setup files are located."
+    !insertmacro MUI_INSTALLOPTIONS_WRITE "download.ini" "Field 1" "Text" "Setup will use the setup files located in the following folder. To use a different folder, click Browse and select another folder. Click Next to continue."
+    !insertmacro MUI_INSTALLOPTIONS_WRITE "download.ini" "Field 4" "Type" ""
+    !insertmacro MUI_INSTALLOPTIONS_WRITE "download.ini" "Field 4" "State" "0"
+    !insertmacro MUI_INSTALLOPTIONS_WRITE "download.ini" "Field 5" "Type" ""
+    !insertmacro MUI_INSTALLOPTIONS_WRITE "download.ini" "Field 5" "State" "0"
   ${Else}
-    !insertmacro MUI_HEADER_TEXT "Distribution Files" "Select where you want the distribution files to be downloaded."
+    !insertmacro MUI_HEADER_TEXT "Setup Files" "Select the download location for the setup files."
   ${EndIf}
-  !insertmacro MUI_INSTALLOPTIONS_WRITE "distfilefolder.ini" "Field 3" "State" ${DISTFILES_PATH}
-  !insertmacro MUI_INSTALLOPTIONS_DISPLAY "distfilefolder.ini"
-
-FunctionEnd
-
-Function MIRRORSELECT
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "download.ini" "Field 3" "State" ${DISTFILES_PATH}
 
   # Only display mirror selection if the installer is in online mode
   ${Unless} $OFFLINE == 1
-    !insertmacro MUI_INSTALLOPTIONS_EXTRACT "mirrorselect.ini"
-    !insertmacro MUI_HEADER_TEXT "Mirror Selection" "Select a mirror from your part of the world."
-
     # Fix the mirrors for the Preferences page
     StrCpy $0 1
     StrCpy $2 "Randomly selected mirror (Recommended)"
@@ -912,24 +995,132 @@ Function MIRRORSELECT
       StrCpy $2 $2 "" 1
     ${EndIf}
 
-    !insertmacro MUI_INSTALLOPTIONS_WRITE "mirrorselect.ini" "Field 3" "ListItems" $2
-    !insertmacro MUI_INSTALLOPTIONS_DISPLAY "mirrorselect.ini"
+    !insertmacro MUI_INSTALLOPTIONS_WRITE "download.ini" "Field 7" "ListItems" $2
   ${EndUnless}
+
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY "download.ini"
 
 FunctionEnd
 
 Function FULLVERSION
 
-  !insertmacro MUI_INSTALLOPTIONS_EXTRACT "fullversion.ini"
-  # Set the path to exedir if pak1.pak is found there
-  ${If} ${FileExists} "$EXEDIR\pak1.pak"
-    ${GetSize} $EXEDIR "/M=pak1.pak /S=0B /G=0" $7 $8 $9
-    ${If} $7 == "34257856"
-      !insertmacro MUI_INSTALLOPTIONS_WRITE "fullversion.ini" "Field 3" "State" "$EXEDIR\pak1.pak"
-    ${EndIf}
+  # Copy pak1.pak if it can be found alongside the installer executable
+  ${If} ${FileExists} "$LOCALAPPDATA\nQuake2\pak1.pak"
+    StrCpy $R0 "$LOCALAPPDATA\nQuake2"
+  ${ElseIf} ${FileExists} "$EXEDIR\pak1.pak"
+    StrCpy $R0 "$EXEDIR"
+  ${ElseIf} ${FileExists} "C:\nQuake\id1\pak1.pak"
+    StrCpy $R0 "C:\nQuake\id1"
   ${EndIf}
-  !insertmacro MUI_HEADER_TEXT "Configuration" "Locate Quake registered data."
+  ${GetSize} $R0 "/M=pak1.pak /S=0B /G=0" $7 $8 $9
+  ${If} $7 == "34257856"
+    !insertmacro MUI_INSTALLOPTIONS_WRITE "fullversion.ini" "Field 3" "State" "$R0\pak1.pak"
+    StrCpy $PAK_LOCATION "$R0\pak1.pak"
+    Goto SkipFullVersion
+  ${EndIf}
+
+  !insertmacro MUI_INSTALLOPTIONS_EXTRACT "fullversion.ini"
+  !insertmacro MUI_HEADER_TEXT "Full Version Data" "Locate Quake registered data."
+
+  # Look for pak1.pak in 28 likely locations
+  ${If} ${FileExists} "C:\Quake\id1\pak1.pak"
+    StrCpy $0 "C:\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "D:\Quake\id1\pak1.pak"
+    StrCpy $0 "D:\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "E:\Quake\id1\pak1.pak"
+    StrCpy $0 "E:\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "C:\Games\Quake\id1\pak1.pak"
+    StrCpy $0 "C:\Games\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "D:\Games\Quake\id1\pak1.pak"
+    StrCpy $0 "D:\Games\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "E:\Games\Quake\id1\pak1.pak"
+    StrCpy $0 "E:\Games\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "C:\Program Files\Quake\id1\pak1.pak"
+    StrCpy $0 "C:\Program Files\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "C:\nQuake\id1\pak1.pak"
+    StrCpy $0 "C:\nQuake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "D:\nQuake\id1\pak1.pak"
+    StrCpy $0 "D:\nQuake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "E:\nQuake\id1\pak1.pak"
+    StrCpy $0 "E:\nQuake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "C:\Games\nQuake\id1\pak1.pak"
+    StrCpy $0 "C:\Games\nQuake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "D:\Games\nQuake\id1\pak1.pak"
+    StrCpy $0 "D:\Games\nQuake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "E:\Games\nQuake\id1\pak1.pak"
+    StrCpy $0 "E:\Games\nQuake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "C:\Program Files\nQuake\id1\pak1.pak"
+    StrCpy $0 "C:\Program Files\nQuake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "C:\Valve\Steam\SteamApps\common\Quake\id1\pak1.pak"
+    StrCpy $0 "C:\Valve\Steam\SteamApps\common\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "D:\Valve\Steam\SteamApps\common\Quake\id1\pak1.pak"
+    StrCpy $0 "D:\Valve\Steam\SteamApps\common\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "E:\Valve\Steam\SteamApps\common\Quake\id1\pak1.pak"
+    StrCpy $0 "E:\Valve\Steam\SteamApps\common\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "C:\Steam\SteamApps\common\Quake\id1\pak1.pak"
+    StrCpy $0 "C:\Steam\SteamApps\common\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "D:\Steam\SteamApps\common\Quake\id1\pak1.pak"
+    StrCpy $0 "D:\Steam\SteamApps\common\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "E:\Steam\SteamApps\common\Quake\id1\pak1.pak"
+    StrCpy $0 "E:\Steam\SteamApps\common\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${EndIf}
+  ${If} ${FileExists} "C:\Program Files\Valve\Steam\SteamApps\common\Quake\id1\pak1.pak"
+    StrCpy $0 "C:\Program Files\Valve\Steam\SteamApps\common\Quake\id1"
+    !insertmacro ValidatePak $0
+  ${Else}
+    Goto FullVersionEnd
+  ${EndIf}
+
+  FullVersion:
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "fullversion.ini" "Field 1" "Text" "The full version of Quake is not included in this package. However, setup has found what resembles the full version pak1.pak on your harddrive. If this is not the correct file, click Browse to locate the correct pak1.pak. Click Next to continue."
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "fullversion.ini" "Field 3" "State" "$0\pak1.pak"
+  FullVersionEnd:
+  # Remove the purchase link if the installer is in offline mode
+  ${If} $OFFLINE == 1
+    !insertmacro MUI_INSTALLOPTIONS_WRITE "fullversion.ini" "Field 4" "Type" ""
+  ${EndIf}
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "fullversion.ini"
+
+  SkipFullVersion:
 
 FunctionEnd
 
@@ -954,6 +1145,15 @@ Function ADDONS
   !insertmacro MUI_INSTALLOPTIONS_WRITE "addons.ini" "Field 15" "State" "$0 Team Fortress"
   !insertmacro MUI_INSTALLOPTIONS_WRITE "addons.ini" "Field 18" "State" "$0 Free For All"
   !insertmacro MUI_INSTALLOPTIONS_WRITE "addons.ini" "Field 21" "State" "$0 Clan Arena"
+  !insertmacro DetermineSectionSize sv-fortress.zip
+  IntOp $1 $SIZE / 1000
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "addons.ini" "Field 13" "Text" "Install Team Fortress ($1 MB)"
+  !insertmacro DetermineSectionSize sv-ffa.zip
+  IntOp $1 $SIZE / 1000
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "addons.ini" "Field 16" "Text" "Install Free For All ($1 MB)"
+  !insertmacro DetermineSectionSize sv-ca.zip
+  IntOp $1 $SIZE / 1000
+  !insertmacro MUI_INSTALLOPTIONS_WRITE "addons.ini" "Field 19" "Text" "Install Clan Arena ($1 MB)"
   !insertmacro MUI_HEADER_TEXT "Configuration" "Setup modifications and proxies."
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "addons.ini"
 
@@ -1045,14 +1245,21 @@ Function SetSize
   !insertmacro MUI_INSTALLOPTIONS_READ $ADDONS_FFA "addons.ini" "Field 16" "State"
   !insertmacro MUI_INSTALLOPTIONS_READ $ADDONS_CA "addons.ini" "Field 19" "State"
   !insertmacro MUI_INSTALLOPTIONS_READ $ADDONS_FORTRESS "addons.ini" "Field 13" "State"
+  !insertmacro MUI_INSTALLOPTIONS_READ $DISTFILES_PATH "download.ini" "Field 3" "State"
   IntOp $1 0 + 0
-  # Only count shareware if pak0.pak doesn't exist
-  ${If} ${FileExists} "$EXEDIR\pak0.pak"
-    ${GetSize} $EXEDIR "/M=pak0.pak /S=0B /G=0" $7 $8 $9
-    ${If} $7 == "18689235"
+  # Only add shareware if pak0.pak doesn't exist
+  IntOp $1 0 + 0
+  ${Unless} ${FileExists} "$INSTDIR\ID1\pak0.pak"
+    ${If} ${FileExists} "$EXEDIR\pak0.pak"
+      StrCpy $R0 "$EXEDIR"
+    ${ElseIf} ${FileExists} "$DISTFILES_PATH\pak0.pak"
+      StrCpy $R0 "$DISTFILES_PATH"
+    ${EndIf}
+    ${GetSize} $R0 "/M=pak0.pak /S=0B /G=0" $7 $8 $9
+    ${If} $7 == "18278619"
       Goto SkipShareware
     ${EndIf}
-  ${EndIf}
+  ${EndUnless}
   !insertmacro DetermineSectionSize qsw106.zip
   IntOp $1 $1 + $SIZE
   SkipShareware:
@@ -1206,7 +1413,8 @@ Function .abortInstallation
   Delete /REBOOTOK "$INSTDIR\install.log"
   ${locate::RMDirEmpty} $INSTDIR /M=*.* $0
   DetailPrint "Removed $0 empty directories"
-  RMDir /REBOOTOK $INSTDIR
+  # Remove directory if empty
+  !insertmacro RemoveFolderIfEmpty $INSTDIR
   Goto InstEnd
   SkipInstRemoval:
   Delete /REBOOTOK "$INSTDIR\install.log"
@@ -1234,7 +1442,8 @@ Function .abortInstallation
       IntOp $5 $5 + 1
     ${LoopUntil} ${Errors}
   FileClose $R0
-  RMDir /REBOOTOK $DISTFILES_PATH
+  # Remove directory if empty
+  !insertmacro RemoveFolderIfEmpty $DISTFILES_PATH
   DistEnd:
 
   # Set progress bar to 100%
@@ -1296,7 +1505,10 @@ Function .installSection
   Pop $R1 # distfile info
   Pop $R0 # distfile filename
   Call .checkDistfileDate
-  ${If} ${FileExists} "$DISTFILES_PATH\$R0"
+  ${If} ${FileExists} "$EXEDIR\$R0"
+    DetailPrint "Extracting $R1, please wait..."
+    nsisunz::UnzipToStack "$EXEDIR\$R0" $INSTDIR
+  ${ElseIf} ${FileExists} "$DISTFILES_PATH\$R0"
   ${OrIf} $OFFLINE == 1
     ${If} $DISTFILES_UPDATE == 0
     ${OrIf} $R2 == 0

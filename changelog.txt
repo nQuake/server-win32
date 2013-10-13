@@ -1,3 +1,12 @@
+2013-10-13 - nQuakesv v1.4 for Windows
+
+* Improved the full version setup step, which now searches for pak1.pak in likely locations and skips the step entirely if it can be found in one of three key locations.
+* Setup now also looks for setup files in the installer folder.
+* Setup now copies pak0.pak and pak1.pak to setup file folder for later use if user selects to keep setup files.
+* Fixed the bug where the installation folder would sometimes not get removed.
+* Fixed the bug where the setup files folder would get removed even if it wasn't empty. (This could cause pretty much damage if the files were downloaded to e.g. D:\.)
+* Minor bug fixes and code improvement.
+
 2013-10-10 - nQuakesv v1.3 for Windows
 
 * Fixed the bug where the download size was inaccurate.
