@@ -1,8 +1,8 @@
 ;nQuakesv NSIS Online Installer Script
-;By Empezar 2013-08-03; Last modified 2013-10-13
+;By Empezar 2013-08-03; Last modified 2013-10-17
 
-!define VERSION "1.4"
-!define SHORTVERSION "14"
+!define VERSION "1.5"
+!define SHORTVERSION "15"
 
 Name "nQuakesv"
 OutFile "nquakesv${SHORTVERSION}_installer.exe"
@@ -308,10 +308,14 @@ Section "nQuakesv" NQUAKESV
   ${GetSize} $R0 "/M=pak0.pak /S=0B /G=0" $7 $8 $9
   ${If} $7 == "18689235"
     CreateDirectory "$INSTDIR\id1"
-    CopyFiles "$R0\pak0.pak" "$INSTDIR\id1\pak0.pak"
+    ${Unless} ${FileExists} "$INSTDIR\id1\pak0.pak"
+      CopyFiles /SILENT "$R0\pak0.pak" "$INSTDIR\id1\pak0.pak"
+    ${EndUnless}
     # Keep pak0.pak and remove qsw106.zip in distfile folder if DISTFILES_DELETE is 0
     ${If} $DISTFILES_DELETE == 0
-      CopyFiles "$INSTDIR\id1\pak0.pak" "$DISTFILES_PATH\pak0.pak"
+      ${Unless} ${FileExists} "$DISTFILES_PATH\pak0.pak"
+        CopyFiles /SILENT "$R0\pak0.pak" "$DISTFILES_PATH\pak0.pak"
+      ${EndUnless}
       Delete "$DISTFILES_PATH\qsw106.zip"
     ${EndIf}
     Goto SkipShareware
@@ -339,7 +343,9 @@ Section "nQuakesv" NQUAKESV
   Rename "$INSTDIR\id1\PAK0.PAK" "$INSTDIR\id1\pak0.pak"
   # Keep pak0.pak and remove qsw106.zip in distfile folder if DISTFILES_DELETE is 0
   ${If} $DISTFILES_DELETE == 0
-    CopyFiles "$INSTDIR\id1\pak0.pak" "$DISTFILES_PATH\pak0.pak"
+    ${Unless} ${FileExists} "$DISTFILES_PATH\pak0.pak"
+      CopyFiles /SILENT "$INSTDIR\id1\pak0.pak" "$DISTFILES_PATH\pak0.pak"
+    ${EndUnless}
     Delete "$DISTFILES_PATH\qsw106.zip"
   ${EndIf}
   SkipShareware:
@@ -443,9 +449,13 @@ Section "nQuakesv" NQUAKESV
 
   # Copy pak1.pak if it can be found alongside the installer executable
   ${If} ${FileExists} "$PAK_LOCATION"
-    CopyFiles /SILENT $PAK_LOCATION "$INSTDIR\id1\pak1.pak"
+    ${Unless} ${FileExists} "$INSTDIR\id1\pak1.pak"
+      CopyFiles /SILENT $PAK_LOCATION "$INSTDIR\id1\pak1.pak"
+    ${EndUnless}
     ${If} $DISTFILES_DELETE == 0
-      CopyFiles "$INSTDIR\id1\pak1.pak" "$DISTFILES_PATH\pak1.pak"
+      ${Unless} ${FileExists} "$DISTFILES_PATH\pak1.pak"
+        CopyFiles /SILENT "$INSTDIR\id1\pak1.pak" "$DISTFILES_PATH\pak1.pak"
+      ${EndUnless}
     ${EndIf}
     RMDir /r /REBOOTOK "$INSTDIR\id1\maps"
     RMDir /r /REBOOTOK "$INSTDIR\id1\progs"
@@ -456,9 +466,13 @@ Section "nQuakesv" NQUAKESV
   ${ElseIf} ${FileExists} "$EXEDIR\pak1.pak"
     ${GetSize} $EXEDIR "/M=pak1.pak /S=0B /G=0" $7 $8 $9
     ${If} $7 == "34257856"
-      CopyFiles "$EXEDIR\pak1.pak" "$INSTDIR\id1\pak1.pak"
+      ${Unless} ${FileExists} "$INSTDIR\id1\pak1.pak"
+        CopyFiles /SILENT "$EXEDIR\pak1.pak" "$INSTDIR\id1\pak1.pak"
+      ${EndUnless}
       ${If} $DISTFILES_DELETE == 0
-        CopyFiles "$EXEDIR\pak1.pak" "$DISTFILES_PATH\pak1.pak"
+        ${Unless} ${FileExists} "$DISTFILES_PATH\pak1.pak"
+          CopyFiles /SILENT "$EXEDIR\pak1.pak" "$DISTFILES_PATH\pak1.pak"
+        ${EndUnless}
       ${EndIf}
       RMDir /r /REBOOTOK "$INSTDIR\id1\maps"
       RMDir /r /REBOOTOK "$INSTDIR\id1\progs"
@@ -739,7 +753,7 @@ Section "" # Clean up installation
       FileWrite $PORTCONFIG "$\r$\n"
       FileWrite $PORTCONFIG "set k_motd_time                 $\"5$\" // time motd is displayed in seconds$\r$\n"
     FileClose $PORTCONFIG
-    CopyFiles "$INSTDIR\fortress\port1.cfg" "$INSTDIR\thundervote\port1.cfg"
+    CopyFiles /SILENT "$INSTDIR\fortress\port1.cfg" "$INSTDIR\thundervote\port1.cfg"
     FileWrite $INSTLOG "thundervote\port1.cfg$\r$\n"
   ${EndIf}
 
@@ -855,7 +869,7 @@ Section "" # Clean up installation
   # Copy nquake.ini to the distfiles directory if "update distfiles" and "keep distfiles" was set
   ${ElseIf} $DISTFILES_UPDATE == 1
     FlushINI $NQUAKE_INI
-    CopyFiles $NQUAKE_INI "$DISTFILES_PATH\nquake.ini"
+    CopyFiles /SILENT $NQUAKE_INI "$DISTFILES_PATH\nquake.ini"
   ${EndIf}
 
   # Write to registry
