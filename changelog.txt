@@ -1,3 +1,8 @@
+2013-??-?? - nQuakesv v1.5 for Windows
+
+* Setup now checks whether pak0.pak or pak1.pak exists in destination folder before copying.
+* Fixed the bug where file copies (pak0.pak/pak1.pak) were displayed (Explorer copy files) during setup.
+
 2013-10-13 - nQuakesv v1.4 for Windows
 
 * Improved the full version setup step, which now searches for pak1.pak in likely locations and skips the step entirely if it can be found in one of three key locations.

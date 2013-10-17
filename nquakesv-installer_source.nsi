@@ -206,7 +206,7 @@ Section "" # Prepare installation
   ${Unless} ${FileExists} "$INSTDIR\ID1\PAK0.PAK"
     ${If} ${FileExists} "$PAK_LOCATION"
       ${GetSize} $R0 "/M=pak0.pak /S=0B /G=0" $7 $8 $9
-      ${If} $7 != "18278619"
+      ${If} $7 != "18689235"
         ReadINIStr $0 $NQUAKE_INI "distfile_sizes" "qsw106.zip"
         IntOp $INSTSIZE $INSTSIZE + $0
       ${EndIf}
@@ -318,6 +318,7 @@ Section "nQuakesv" NQUAKESV
       ${EndUnless}
       Delete "$DISTFILES_PATH\qsw106.zip"
     ${EndIf}
+    FileWrite $INSTLOG "id1\pak0.pak$\r$\n"
     Goto SkipShareware
   ${EndIf}
   !insertmacro InstallSection qsw106.zip "Quake shareware"
@@ -356,7 +357,6 @@ Section "nQuakesv" NQUAKESV
   IntOp $0 $INSTALLED * 100
   IntOp $0 $0 / $INSTSIZE
   RealProgress::SetProgress /NOUNLOAD $0
-  FileWrite $INSTLOG "id1\pak0.pak$\r$\n"
 
   # Download and install binaries
   !insertmacro InstallSection sv-bin-win32.zip "server binaries"
@@ -815,34 +815,12 @@ Section "" # Clean up installation
   FileClose $ERRLOG
   FileClose $DISTLOG
 
-
-    ${DoUntil} ${Errors}
-      FileRead $R0 $0
-      StrCpy $0 $0 -2
-      # Only remove file if it has not been altered since install, if the user chose to do so
-      ${If} ${FileExists} "$INSTDIR\$0"
-      ${AndUnless} $REMOVE_MODIFIED_FILES == 1
-        ${time::GetFileTime} "$INSTDIR\$0" $2 $3 $4
-        ${time::MathTime} "second($1) - second($3) =" $2
-        ${If} $2 >= 0
-          Delete /REBOOTOK "$INSTDIR\$0"
-        ${EndIf}
-      ${ElseIf} $REMOVE_MODIFIED_FILES == 1
-      ${AndIf} ${FileExists} "$INSTDIR\$0"
-        Delete /REBOOTOK "$INSTDIR\$0"
-      ${EndIf}
-      # Set progress bar
-      IntOp $7 $5 * 100
-      IntOp $7 $7 / $R1
-      RealProgress::SetProgress /NOUNLOAD $7
-      IntOp $5 $5 + 1
-    ${LoopUntil} ${Errors}
-
   # Write install.log
   FileOpen $INSTLOG "$INSTDIR\install.log" w
     ${time::GetFileTime} "$INSTDIR\install.log" $0 $1 $2
     FileWrite $INSTLOG "Install date: $1$\r$\n"
     FileOpen $R0 $INSTLOGTMP r
+      ClearErrors
       ${DoUntil} ${Errors}
         FileRead $R0 $0
         StrCpy $0 $0 -2
@@ -1270,7 +1248,7 @@ Function SetSize
       StrCpy $R0 "$DISTFILES_PATH"
     ${EndIf}
     ${GetSize} $R0 "/M=pak0.pak /S=0B /G=0" $7 $8 $9
-    ${If} $7 == "18278619"
+    ${If} $7 == "18689235"
       Goto SkipShareware
     ${EndIf}
   ${EndUnless}
