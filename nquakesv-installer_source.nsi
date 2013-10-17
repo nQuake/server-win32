@@ -1019,8 +1019,8 @@ FunctionEnd
 Function FULLVERSION
 
   # Copy pak1.pak if it can be found alongside the installer executable
-  ${If} ${FileExists} "$LOCALAPPDATA\nQuake2\pak1.pak"
-    StrCpy $R0 "$LOCALAPPDATA\nQuake2"
+  ${If} ${FileExists} "$LOCALAPPDATA\nQuakesv\pak1.pak"
+    StrCpy $R0 "$LOCALAPPDATA\nQuakesv"
   ${ElseIf} ${FileExists} "$EXEDIR\pak1.pak"
     StrCpy $R0 "$EXEDIR"
   ${ElseIf} ${FileExists} "C:\nQuake\id1\pak1.pak"
