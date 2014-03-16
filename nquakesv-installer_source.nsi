@@ -15,6 +15,7 @@ InstallDir "C:\nQuakesv"
 ;---------------------------------------------------
 
 InstallDirRegKey HKCU "Software\nQuakesv" "Install_Dir"
+InstallDirRegKey HKCU "Software\nQuakesv" "Setup_Dir"
 
 ;----------------------------------------------------
 ;Header Files
@@ -77,6 +78,7 @@ Var OFFLINE
 Var PAK_LOCATION
 Var REMOVE_ALL_FILES
 Var REMOVE_MODIFIED_FILES
+Var REMOVE_SETUP_FILES
 Var RETRIES
 Var SIZE
 Var STARTALLSERVERS
@@ -854,6 +856,7 @@ Section "" # Clean up installation
 
   # Write to registry
   WriteRegStr HKCU "Software\nQuakesv" "Install_Dir" "$INSTDIR"
+  WriteRegStr HKCU "Software\nQuakesv" "Setup_Dir" "$DISTFILES_PATH"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\nQuakesv" "DisplayName" "nQuakesv"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\nQuakesv" "DisplayVersion" "${VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\nQuakesv" "DisplayIcon" "$INSTDIR\uninstall.exe"
@@ -881,6 +884,7 @@ Section "Uninstall"
   # Read uninstall settings
   !insertmacro MUI_INSTALLOPTIONS_READ $REMOVE_MODIFIED_FILES "uninstall.ini" "Field 5" "State"
   !insertmacro MUI_INSTALLOPTIONS_READ $REMOVE_ALL_FILES "uninstall.ini" "Field 6" "State"
+  !insertmacro MUI_INSTALLOPTIONS_READ $REMOVE_SETUP_FILES "uninstall.ini" "Field 7" "State"
 
   # Set progress bar to 0%
   RealProgress::SetProgress /NOUNLOAD 0
@@ -932,6 +936,50 @@ Section "Uninstall"
     MessageBox MB_YESNO|MB_ICONEXCLAMATION "This will remove all files contained within the nQuakesv directory.$\r$\n$\r$\nAre you sure?" IDNO AbortUninst
     RMDir /r /REBOOTOK $INSTDIR
     RealProgress::SetProgress /NOUNLOAD 100
+  ${EndIf}
+
+  # Remove setup files if user checked "remove setup files"
+  ${If} $REMOVE_SETUP_FILES == 1
+    ReadRegStr $R0 HKCU "Software\nQuakesv" "Setup_Dir"
+    ${If} ${FileExists} "$R0\nquake.ini"
+      Delete /REBOOTOK "$R0\nquake.ini"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\pak0.pak"
+      Delete /REBOOTOK "$R0\pak0.pak"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\pak1.pak"
+      Delete /REBOOTOK "$R0\pak1.pak"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\sv-bin-win32.zip"
+      Delete /REBOOTOK "$R0\sv-bin-win32.zip"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\sv-ca.zip"
+      Delete /REBOOTOK "$R0\sv-ca.zip"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\sv-configs.zip"
+      Delete /REBOOTOK "$R0\sv-configs.zip"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\sv-ffa.zip"
+      Delete /REBOOTOK "$R0\sv-ffa.zip"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\sv-fortress.zip"
+      Delete /REBOOTOK "$R0\sv-fortress.zip"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\sv-gpl.zip"
+      Delete /REBOOTOK "$R0\sv-gpl.zip"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\sv-maps.zip"
+      Delete /REBOOTOK "$R0\sv-maps.zip"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\sv-non-gpl.zip"
+      Delete /REBOOTOK "$R0\sv-non-gpl.zip"
+    ${EndIf}
+    ${If} ${FileExists} "$R0\sv-win32.zip"
+      Delete /REBOOTOK "$R0\sv-win32.zip"
+    ${EndIf}
+    # Remove directory if empty
+    ${locate::RMDirEmpty} $R0 /M=*.* $0
+    !insertmacro RemoveFolderIfEmpty $R0
   ${EndIf}
 
   # Remove start menu items and registry entries if they belong to this nQuakesv
