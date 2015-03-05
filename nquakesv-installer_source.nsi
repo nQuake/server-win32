@@ -695,6 +695,18 @@ Section "" # Clean up installation
     FileWrite $PORTCONFIG "//set k_motd5                     $\"line 5$\" // etc..$\r$\n"
     FileWrite $PORTCONFIG "$\r$\n"
     FileWrite $PORTCONFIG "set k_motd_time                 $\"5$\" // time motd is displayed in seconds$\r$\n"
+    FileWrite $PORTCONFIG "$\r$\n"
+    FileWrite $PORTCONFIG "// edit the lines below if you want different gamemodes on this port$\r$\n"
+    FileWrite $PORTCONFIG "// matchless mode$\r$\n"
+    FileWrite $PORTCONFIG "set k_matchless                 0               // run ktx as a regular match server or as a matchless (ffa) server (0 = regular, 1 = matchless)$\r$\n"
+    FileWrite $PORTCONFIG "set k_use_matchless_dir         1               // use configs/usermodes/matchless instead of [...]/ffa (0 = no, 1 = yes)$\r$\n"
+    FileWrite $PORTCONFIG "$\r$\n"
+    FileWrite $PORTCONFIG "// free modes$\r$\n"
+    FileWrite $PORTCONFIG "set k_defmode                   2on2            // default mode on server$\r$\n"
+    FileWrite $PORTCONFIG "set k_allowed_free_modes        255             // allowed free modes (bit mask):$\r$\n"
+    FileWrite $PORTCONFIG "                                                //  1=1on1, 2=2on2, 4=3on3, 8=4on4, 16=10on10, 32=ffa 64=ctf 128=hoonymode$\r$\n"
+    FileWrite $PORTCONFIG "set k_defmap                    dm4             // server homemap. server will change to this when last player leaves the server$\r$\n"
+    FileWrite $PORTCONFIG "set k_mode                      2               // server mode (1 = duel, 2 = team, 3 = ffa, 4 = ctf)$\r$\n"
     FileClose $PORTCONFIG
     FileWrite $INSTLOG "ktx\port$i.cfg$\r$\n"
   ${Next}
