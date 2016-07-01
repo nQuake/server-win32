@@ -1,14 +1,15 @@
 ;nQuakesv NSIS Online Installer Script
-;By Empezar 2013-08-03; Last modified 2014-03-16
+;By Empezar 2013-08-03; Last modified 2016-07-01
 
-!define VERSION "1.6"
-!define SHORTVERSION "16"
+!define VERSION "1.7"
+!define SHORTVERSION "17"
 
 Name "nQuakesv"
 OutFile "nquakesv${SHORTVERSION}_installer.exe"
 InstallDir "C:\nQuakesv"
 
-!define INSTALLER_URL "http://nquake.com" # Note: no trailing slash!
+!define NQUAKE_URL "http://nquake.com" # Note: no trailing slash!
+!define NQUAKE_INI_URL "https://raw.githubusercontent.com/nQuake/client-win32/master/etc/nquake.ini" # Note: no trailing slash!
 !define DISTFILES_PATH "$LOCALAPPDATA\nQuakesv\" # Note: no trailing slash!
 
 # Editing anything below this line is not recommended
@@ -1368,7 +1369,7 @@ Function .onInit
 
   # Download nquake.ini
   Start:
-  inetc::get /NOUNLOAD /CAPTION "Initializing..." /BANNER "nQuakesv is initializing, please wait..." /TIMEOUT 5000 "${INSTALLER_URL}/nquake.ini" $NQUAKE_INI /END
+  inetc::get /NOUNLOAD /CAPTION "Initializing..." /BANNER "nQuakesv is initializing, please wait..." /TIMEOUT 5000 "${NQUAKE_INI_URL}" $NQUAKE_INI /END
   Pop $0
   ${Unless} $0 == "OK"
     ${If} $0 == "Cancelled"
@@ -1398,7 +1399,7 @@ Function .onInit
   ${VersionCompare} $R0 $0 $1
   ${If} $1 == 2
     MessageBox MB_YESNO|MB_ICONEXCLAMATION "A newer version of nQuakesv is available.$\r$\n$\r$\nDo you wish to be taken to the download page?" IDNO ContinueInstall
-    ExecShell "open" ${INSTALLER_URL}
+    ExecShell "open" ${NQUAKE_URL}
     Abort
   ${EndIf}
   ContinueInstall:
