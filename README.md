@@ -1,5 +1,15 @@
-nQuake Server for Windows
-======
+# nQuake Server for Windows
+
+## DEPRECATION
+
+This project has been deprecated and replaced by the following projects:
+
+* [nQuakesv](https://github.com/nQuake/nquakesv) - docker-compose
+* [nQuakesv Docker](https://github.com/niclaslindstedt/nquakesv-docker) - image
+* [QWFWD Docker](https://github.com/niclaslindstedt/qwfwd-docker) - image
+* [QTV Docker](https://github.com/niclaslindstedt/qtv-docker) - image
+
+## Installation
 
 To compile an nQuake Server installer, follow these steps:
 
