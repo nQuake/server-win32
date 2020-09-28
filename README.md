@@ -1,13 +1,13 @@
 # nQuake Server for Windows
 
-## DEPRECATION
+### Docker
 
-This project has been deprecated and replaced by the following projects:
+If you're interested in running nQuakesv in Docker, you can find the relevant projects here:
 
-* [nQuakesv](https://github.com/nQuake/nquakesv) - docker-compose
-* [nQuakesv Docker](https://github.com/niclaslindstedt/nquakesv-docker) - image
-* [QWFWD Docker](https://github.com/niclaslindstedt/qwfwd-docker) - image
-* [QTV Docker](https://github.com/niclaslindstedt/qtv-docker) - image
+* [nQuakesv](https://github.com/nQuake/nquakesv) - Docker Compose project
+* [nQuakesv Docker](https://github.com/niclaslindstedt/nquakesv-docker) - Docker server image
+* [QTV Docker](https://github.com/niclaslindstedt/qtv-docker) - Docker QTV image
+* [QWFWD Docker](https://github.com/niclaslindstedt/qwfwd-docker) - Docker QWFWD image
 
 ## Installation
 
@@ -23,6 +23,3 @@ Tips:<br>
 * Edit the contents of the installer pages in the .ini files and their functions in the installer source file (e.g. Function DOWNLOAD for the download page).<br>
 
 If you decide to fork nQuakesv into your own installer, I would love to get some credit, but since this is GPL I can't force you :)
-
--
-2016-07-01
